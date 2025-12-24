@@ -11,16 +11,45 @@ class GameState extends ChangeNotifier {
 
   List<Potato?> _farm = List.filled(totalPlots, null);
   int _warehouseCount = 0;
+  int _totalHarvested = 0; // 総収穫数
+  int _totalPlanted = 0; // 総植えた数
   String? _username;
   DateTime? _gameStartDate;
   int _daysPassed = 0;
+  bool _soundEnabled = true; // 音声設定
 
   List<Potato?> get farm => _farm;
   int get warehouseCount => _warehouseCount;
+  int get totalHarvested => _totalHarvested;
+  int get totalPlanted => _totalPlanted;
   String? get username => _username;
   int get daysPassed => _daysPassed;
 
   bool get isLoggedIn => _username != null;
+  bool get soundEnabled => _soundEnabled;
+  
+  // 収穫率を計算（%）
+  double get harvestRate {
+    if (_totalPlanted == 0) return 0.0;
+    return (_totalHarvested / _totalPlanted) * 100;
+  }
+  
+  // 現在植えられている芋の数
+  int get currentlyPlanted {
+    return _farm.where((p) => p != null && !p!.isEmpty).length;
+  }
+  
+  // 成熟している芋の数
+  int get matureCount {
+    return _farm.where((p) => p != null && p!.isHarvestable).length;
+  }
+  
+  // 音声設定を変更
+  void setSoundEnabled(bool enabled) {
+    _soundEnabled = enabled;
+    notifyListeners();
+    _saveGameData();
+  }
 
   GameState() {
     _initializeFarm();
@@ -44,6 +73,7 @@ class GameState extends ChangeNotifier {
     );
 
     _farm[index] = potato;
+    _totalPlanted++;
     notifyListeners();
     _saveGameData();
   }
@@ -55,6 +85,7 @@ class GameState extends ChangeNotifier {
     if (potato == null || !potato.isHarvestable) return;
 
     _warehouseCount++;
+    _totalHarvested++;
     _farm[index] = null;
     notifyListeners();
     _saveGameData();
@@ -90,8 +121,8 @@ class GameState extends ChangeNotifier {
 
   // 成長タイマーを開始
   void _startGrowthTimer() {
-    // 1秒ごとに成長をチェック
-    Future.delayed(const Duration(seconds: 1), () {
+    // 0.5秒ごとに成長をチェック（よりスムーズな更新）
+    Future.delayed(const Duration(milliseconds: 500), () {
       _checkGrowth();
       _startGrowthTimer();
     });
@@ -113,8 +144,10 @@ class GameState extends ChangeNotifier {
       }
     }
 
+    // 進捗バーの更新のために常に通知（アニメーションのため）
+    notifyListeners();
+    
     if (hasChanged) {
-      notifyListeners();
       _saveGameData();
     }
   }
@@ -126,6 +159,8 @@ class GameState extends ChangeNotifier {
       final farmData = _farm.map((p) => p?.toJson()).toList();
       await prefs.setString('farm', jsonEncode(farmData));
       await prefs.setInt('warehouseCount', _warehouseCount);
+      await prefs.setInt('totalHarvested', _totalHarvested);
+      await prefs.setInt('totalPlanted', _totalPlanted);
       if (_username != null) {
         await prefs.setString('username', _username!);
       }
@@ -133,6 +168,7 @@ class GameState extends ChangeNotifier {
         await prefs.setString('gameStartDate', _gameStartDate!.toIso8601String());
       }
       await prefs.setInt('daysPassed', _daysPassed);
+      await prefs.setBool('soundEnabled', _soundEnabled);
     } catch (e) {
       debugPrint('Error saving game data: $e');
     }
@@ -152,6 +188,8 @@ class GameState extends ChangeNotifier {
       }
 
       _warehouseCount = prefs.getInt('warehouseCount') ?? 0;
+      _totalHarvested = prefs.getInt('totalHarvested') ?? 0;
+      _totalPlanted = prefs.getInt('totalPlanted') ?? 0;
       _username = prefs.getString('username');
       final gameStartDateStr = prefs.getString('gameStartDate');
       if (gameStartDateStr != null) {
@@ -159,6 +197,7 @@ class GameState extends ChangeNotifier {
         _updateDaysPassed();
       }
       _daysPassed = prefs.getInt('daysPassed') ?? 0;
+      _soundEnabled = prefs.getBool('soundEnabled') ?? true;
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading game data: $e');

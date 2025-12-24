@@ -27,18 +27,18 @@ class WarehouseScreen extends StatelessWidget {
         child: SafeArea(
           child: Consumer<GameState>(
             builder: (context, gameState, child) {
-              return Center(
+              return SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      const SizedBox(height: 16),
                       const Icon(
                         Icons.warehouse,
-                        size: 120,
+                        size: 100,
                         color: Colors.orange,
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 24),
                       const Text(
                         '倉庫内の芋',
                         style: TextStyle(
@@ -64,20 +64,26 @@ class WarehouseScreen extends StatelessWidget {
                         child: Column(
                           children: [
                             const Text(
-                              '合計個数',
+                              '倉庫内の個数',
                               style: TextStyle(
                                 fontSize: 18,
                                 color: Colors.grey,
                               ),
                             ),
                             const SizedBox(height: 16),
-                            Text(
-                              '${gameState.warehouseCount}',
-                              style: const TextStyle(
-                                fontSize: 64,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.orange,
-                              ),
+                            TweenAnimationBuilder<int>(
+                              tween: IntTween(begin: 0, end: gameState.warehouseCount),
+                              duration: const Duration(milliseconds: 1000),
+                              builder: (context, value, child) {
+                                return Text(
+                                  '$value',
+                                  style: const TextStyle(
+                                    fontSize: 64,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange,
+                                  ),
+                                );
+                              },
                             ),
                             const SizedBox(height: 8),
                             const Text(
@@ -90,7 +96,10 @@ class WarehouseScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 48),
+                      const SizedBox(height: 24),
+                      // 詳細統計
+                      _buildDetailedStats(context, gameState),
+                      const SizedBox(height: 24),
                       ElevatedButton.icon(
                         onPressed: () {
                           Navigator.pop(context);
@@ -106,6 +115,7 @@ class WarehouseScreen extends StatelessWidget {
                           foregroundColor: Colors.white,
                         ),
                       ),
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
@@ -114,6 +124,77 @@ class WarehouseScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildDetailedStats(BuildContext context, GameState gameState) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '📊 統計情報',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.brown,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildStatRow('総植えた数', '${gameState.totalPlanted}個', Icons.agriculture, Colors.green),
+          const SizedBox(height: 12),
+          _buildStatRow('総収穫数', '${gameState.totalHarvested}個', Icons.emoji_events, Colors.orange),
+          const SizedBox(height: 12),
+          _buildStatRow('収穫率', '${gameState.harvestRate.toStringAsFixed(1)}%', Icons.trending_up, Colors.blue),
+          const SizedBox(height: 12),
+          _buildStatRow('プレイ日数', '${gameState.daysPassed}日', Icons.calendar_today, Colors.purple),
+          const SizedBox(height: 12),
+          _buildStatRow('現在植えている数', '${gameState.currentlyPlanted}個', Icons.eco, Colors.lightGreen),
+          const SizedBox(height: 12),
+          _buildStatRow('成熟している数', '${gameState.matureCount}個', Icons.emoji_food_beverage, Colors.orange.shade700),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatRow(String label, String value, IconData icon, Color color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 }

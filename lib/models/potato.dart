@@ -38,6 +38,23 @@ class Potato {
       stage = PotatoStage.mature;
     }
   }
+  
+  // 成長進捗を0.0〜1.0で返す
+  double getGrowthProgress(DateTime now) {
+    if (stage == PotatoStage.empty) return 0.0;
+    
+    final elapsed = now.difference(plantedAt).inSeconds;
+    
+    if (stage == PotatoStage.sprout) {
+      return (elapsed / sproutToYoungSeconds).clamp(0.0, 1.0);
+    } else if (stage == PotatoStage.young) {
+      final progress = (elapsed - sproutToYoungSeconds) / youngToMatureSeconds;
+      return (0.5 + progress * 0.5).clamp(0.0, 1.0);
+    } else if (stage == PotatoStage.mature) {
+      return 1.0;
+    }
+    return 0.0;
+  }
 
   Map<String, dynamic> toJson() {
     return {

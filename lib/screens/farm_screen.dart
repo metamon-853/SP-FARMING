@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/game_state.dart';
 import '../models/potato.dart';
 import '../widgets/farm_plot.dart';
+import '../services/sound_service.dart';
 
 class FarmScreen extends StatelessWidget {
   const FarmScreen({super.key});
@@ -31,6 +32,9 @@ class FarmScreen extends StatelessWidget {
               Expanded(
                 child: _buildFarmGrid(context),
               ),
+              // 統計情報
+              _buildStats(context),
+              const SizedBox(height: 8),
               // ヒントメッセージ
               _buildHintMessage(context),
               const SizedBox(height: 16),
@@ -65,34 +69,61 @@ class FarmScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'ユーザー: ${gameState.username ?? "未ログイン"}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                        const Icon(Icons.person, size: 16, color: Colors.green),
+                        const SizedBox(width: 4),
+                        Text(
+                          gameState.username ?? "未ログイン",
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      '日数: ${gameState.daysPassed}日目',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${gameState.daysPassed}日目',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/warehouse');
-                },
-                icon: const Icon(Icons.warehouse),
-                label: const Text('倉庫へ'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                ),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/settings');
+                    },
+                    icon: const Icon(Icons.settings),
+                    tooltip: '設定',
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.grey.shade200,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/warehouse');
+                    },
+                    icon: const Icon(Icons.warehouse),
+                    label: const Text('倉庫へ'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -122,15 +153,12 @@ class FarmScreen extends StatelessWidget {
                   if (potato == null || potato.isEmpty) {
                     // 空の畑をクリック → 芋を植える
                     gameState.plantPotato(index);
+                    SoundService().playPlantSound();
                   } else if (potato.isHarvestable) {
                     // 成熟した芋をクリック → 収穫
                     gameState.harvestPotato(index);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('芋を収穫しました！'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
+                    SoundService().playHarvestSound();
+                    _checkAchievements(context, gameState);
                   }
                 },
               );
@@ -142,33 +170,156 @@ class FarmScreen extends StatelessWidget {
   }
 
   Widget _buildHintMessage(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Colors.green.withOpacity(0.3),
-          style: BorderStyle.solid,
-        ),
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.info_outline, color: Colors.green, size: 20),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '💬 成熟した芋はクリックで収穫できます',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
-              ),
+    return Consumer<GameState>(
+      builder: (context, gameState, child) {
+        String hintText;
+        IconData hintIcon;
+        Color hintColor;
+        
+        if (gameState.matureCount > 0) {
+          hintText = '💬 ${gameState.matureCount}個の成熟した芋が収穫できます！';
+          hintIcon = Icons.emoji_food_beverage;
+          hintColor = Colors.orange;
+        } else if (gameState.currentlyPlanted > 0) {
+          hintText = '💬 芋が成長中です。しばらくお待ちください...';
+          hintIcon = Icons.eco;
+          hintColor = Colors.green;
+        } else {
+          hintText = '💬 空いている畑をタップして芋を植えましょう！';
+          hintIcon = Icons.info_outline;
+          hintColor = Colors.green;
+        }
+        
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: hintColor.withOpacity(0.3),
+              style: BorderStyle.solid,
             ),
           ),
-        ],
-      ),
+          child: Row(
+            children: [
+              Icon(hintIcon, color: hintColor, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  hintText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
+  }
+
+  Widget _buildStats(BuildContext context) {
+    return Consumer<GameState>(
+      builder: (context, gameState, child) {
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Colors.green.withOpacity(0.3),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatItem(
+                Icons.agriculture,
+                '植えた数',
+                '${gameState.totalPlanted}',
+                Colors.green,
+              ),
+              _buildStatItem(
+                Icons.warehouse,
+                '収穫数',
+                '${gameState.totalHarvested}',
+                Colors.orange,
+              ),
+              _buildStatItem(
+                Icons.trending_up,
+                '収穫率',
+                '${gameState.harvestRate.toStringAsFixed(1)}%',
+                Colors.blue,
+              ),
+              _buildStatItem(
+                Icons.eco,
+                '成熟中',
+                '${gameState.matureCount}',
+                Colors.orange.shade700,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatItem(IconData icon, String label, String value, Color color) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10,
+            color: Colors.grey,
+          ),
+        ),
+      ],
+    );
+  }
+
+
+  void _checkAchievements(BuildContext context, GameState gameState) {
+    final achievements = <String>[];
+    
+    if (gameState.totalHarvested == 10) {
+      achievements.add('初級農家: 10個収穫達成！');
+    } else if (gameState.totalHarvested == 50) {
+      achievements.add('中級農家: 50個収穫達成！');
+    } else if (gameState.totalHarvested == 100) {
+      achievements.add('上級農家: 100個収穫達成！');
+    } else if (gameState.totalHarvested == 500) {
+      achievements.add('マスター農家: 500個収穫達成！');
+    }
+    
+    if (gameState.harvestRate >= 90.0 && gameState.totalPlanted >= 20) {
+      achievements.add('完璧主義者: 収穫率90%以上達成！');
+    }
+    
+    if (gameState.daysPassed >= 7) {
+      achievements.add('継続の力: 7日間プレイ達成！');
+    }
+    
+    for (final achievement in achievements) {
+      SoundService().playAchievementSound();
+      // 達成通知は音声のみで、バナーは表示しない
+    }
   }
 }
 

@@ -56,6 +56,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final gameState = Provider.of<GameState>(context, listen: false);
     gameState.login(username);
+    
+    // すぐに画面遷移（バナーなし）
     Navigator.pushReplacementNamed(context, '/farm');
   }
 

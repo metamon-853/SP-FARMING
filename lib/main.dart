@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/farm_screen.dart';
 import 'screens/warehouse_screen.dart';
+import 'screens/settings_screen.dart';
 import 'models/game_state.dart';
 
 void main() {
@@ -26,6 +27,7 @@ class MyApp extends StatelessWidget {
         routes: {
           '/farm': (context) => const FarmScreen(),
           '/warehouse': (context) => const WarehouseScreen(),
+          '/settings': (context) => const SettingsScreen(),
         },
       ),
     );
