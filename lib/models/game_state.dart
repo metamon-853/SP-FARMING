@@ -60,8 +60,6 @@ class GameState extends ChangeNotifier {
     _saveGameData();
   }
 
-  // 倉庫の芋を確認（個数は既にwarehouseCountで取得可能）
-
   // ログイン
   void login(String username) {
     _username = username;

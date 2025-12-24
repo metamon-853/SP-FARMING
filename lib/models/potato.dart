@@ -16,27 +16,6 @@ class Potato {
     required this.plantedAt,
   });
 
-  // 芋を植える（空の状態から芽の状態へ）
-  void plant() {
-    stage = PotatoStage.sprout;
-  }
-
-  // 成長を進める
-  void grow() {
-    switch (stage) {
-      case PotatoStage.sprout:
-        stage = PotatoStage.young;
-        break;
-      case PotatoStage.young:
-        stage = PotatoStage.mature;
-        break;
-      case PotatoStage.mature:
-      case PotatoStage.empty:
-        // 成熟後は成長しない、空は成長しない
-        break;
-    }
-  }
-
   // 収穫可能かどうか
   bool get isHarvestable => stage == PotatoStage.mature;
 
